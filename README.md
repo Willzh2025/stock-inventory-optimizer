@@ -1,164 +1,199 @@
-# Demand Forecasting and Inventory Optimization System
+# Demand Forecasting & Inventory Optimization System
 
-> An end-to-end prescriptive analytics tool that combines demand forecasting, inventory cost modeling, and mathematical optimization to recommend optimal order quantities for multiple SKUs under budget and capacity constraints, designed for inventory planners and supply chain analysts.
+> A prescriptive analytics application that generates optimal order quantity recommendations under demand uncertainty, budget limits, and warehouse capacity constraints. Designed for supply chain analysts and inventory planners.
 
 ## The Problem
 
-Inventory management represents one of the most critical operational challenges in supply chain management, requiring decision-makers to balance multiple competing objectives simultaneously. Organizations must determine how much inventory to order for each product (SKU) while navigating complex trade-offs between purchasing costs, holding costs, and stockout risks. The fundamental challenge lies in the inherent uncertainty of demand: future demand is never known with certainty, yet inventory decisions must be made in advance with significant financial and operational consequences.
+Inventory planning requires choosing order quantities before actual demand is known. Ordering too much leads to excess inventory, tied-up capital, and high holding costs. Ordering too little results in stockouts, lost sales, and customer dissatisfaction. Because each SKU may have different demand patterns, costs, and operational constraints, simple heuristics often fail in real-world settings.
 
-Ordering too much inventory leads to excess stock that incurs holding costs, ties up capital, and risks obsolescence. Ordering too little inventory results in stockouts that cause lost sales, customer dissatisfaction, and potential service penalties. Additionally, real-world constraints such as limited purchasing budgets and finite warehouse capacity further complicate the decision-making process. Traditional approaches often rely on heuristics, rules-of-thumb, or simple safety stock calculations that fail to account for the full economic implications of inventory decisions across multiple products with different demand patterns, cost structures, and constraint implications.
-
-Without a systematic, data-driven approach, inventory planners face significant risks of suboptimal decisions that can erode profitability. Manual calculations and spreadsheet-based methods become unwieldy when dealing with multiple SKUs, each with different demand patterns, cost structures, and constraint implications. This system addresses these challenges by providing a comprehensive prescriptive analytics solution that explicitly models costs, constraints, and uncertainty to generate mathematically sound recommendations that minimize expected total cost while respecting real-world limitations.
+As organizations manage larger SKU portfolios and operate under multiple constraints such as purchasing budget and warehouse capacity, spreadsheet-based or rule-based approaches become insufficient. A data-driven, optimization-based solution is needed to systematically connect historical demand, economic trade-offs, and business constraints into a single decision model.
 
 ## The Solution
 
-This system implements a prescriptive analytics approach that transforms historical sales data into actionable inventory ordering recommendations through an integrated pipeline combining predictive forecasting, cost modeling, and mathematical optimization. The solution explicitly models the economic trade-offs between overstock and understock scenarios, incorporating real-world constraints such as budget limitations and warehouse capacity restrictions.
+This system provides a complete prescriptive analytics workflow that transforms raw sales data into optimal order recommendations using forecasting, cost modeling, and constrained optimization.
 
-The core innovation lies in the integration of demand forecasting with optimization-based decision support. Rather than treating forecasting and ordering decisions separately, the system uses forecasted demand distributions as inputs to an optimization model that minimizes expected total cost. This approach recognizes that the optimal order quantity depends not only on expected demand but also on the relative costs of overstocking versus understocking, and the constraints that limit feasible solutions. This makes the system an intelligent decision support tool because it automatically synthesizes multiple data sources (historical sales, cost parameters, constraints) and applies mathematical optimization to generate recommendations that are provably optimal given the specified objectives and limitations.
+For each SKU i, the system determines an order quantity Q_i. With the following parameters:
 
-The optimization model employs a newsvendor-type formulation adapted for multiple SKUs with shared constraints. The mathematical formulation begins with decision variables: for each SKU i, the model determines Q_i ≥ 0, representing the order quantity for the upcoming period. The vector Q = [Q_1, Q_2, ..., Q_n] represents the complete ordering decision across all n SKUs.
+- c_i: unit purchase cost  
+- h_i: holding cost per unit of excess inventory  
+- p_i: shortage penalty per unit of unmet demand  
+- v_i: warehouse space per unit  
+- mu_i: forecasted mean demand  
 
-For each SKU i, the model incorporates a comprehensive cost structure:
-- c_i: unit purchase cost
-- h_i: holding cost per unit of leftover inventory
-- π_i: stockout penalty per unit of unmet demand
-- v_i: warehouse space required per unit
-- μ_i: expected demand (mean from historical forecasting)
+The system calculates:
 
-The overstock and understock for each SKU are defined as:
-- overstock_i = max(Q_i - μ_i, 0)  (excess inventory)
-- understock_i = max(μ_i - Q_i, 0)  (unmet demand)
+overstock_i = max(Q_i − mu_i, 0)  
+understock_i = max(mu_i − Q_i, 0)
 
-The objective function minimizes total expected cost:
+Total cost across all SKUs is:
 
-TotalCost = Σ_i [ c_i * Q_i + h_i * overstock_i + π_i * understock_i ]
+TotalCost = sum over i of [ c_i * Q_i + h_i * overstock_i + p_i * understock_i ]
 
-This objective function captures three cost components: purchasing costs (c_i * Q_i) represent the direct cost of acquiring inventory; holding costs (h_i * overstock_i) represent the cost of carrying excess inventory, including capital costs, storage fees, and obsolescence risk; shortage costs (π_i * understock_i) represent the penalty for unmet demand, which may include lost margin, customer dissatisfaction costs, or service level penalties.
+Optional constraints:
 
-The model incorporates real-world limitations through constraints. The budget constraint (if budget B is provided) ensures that total purchasing expenditure does not exceed available budget: Σ_i c_i * Q_i ≤ B. The capacity constraint (if capacity C is provided) ensures that total warehouse space requirements do not exceed available capacity: Σ_i v_i * Q_i ≤ C. Non-negativity constraints ensure that order quantities are physically meaningful: Q_i ≥ 0 for all i.
+Budget: sum over i of (c_i * Q_i) <= B  
+Capacity: sum over i of (v_i * Q_i) <= C
 
-The optimization model works by systematically exploring the feasible solution space defined by these constraints, evaluating the total cost for different combinations of order quantities, and identifying the combination that minimizes expected total cost. The system provides two optimization engines to accommodate different deployment scenarios. The Scipy-based engine uses open-source optimization libraries suitable for cloud deployment and does not require commercial software licenses. The Gurobi-based engine leverages advanced commercial optimization software for more complex problem formulations and potentially faster solution times, with automatic fallback to the Scipy engine when Gurobi is unavailable.
-
-This intelligent decision system transforms raw data into optimal recommendations by explicitly modeling the economic consequences of inventory decisions, ensuring that recommendations are not merely heuristic suggestions but mathematically optimal solutions given the specified cost parameters and constraints.
+The optimization engine finds the set of Q_i values that minimizes total expected cost while satisfying all constraints. The system also produces cost breakdowns, charts, and business-friendly insights describing the drivers behind the optimal recommendations.
 
 ## Live Demo
 
-**[Try it here →](https://your-streamlit-app-url.streamlit.app)**
+Replace with your deployment link:
 
-![Screenshot](./images/screenshot_main.png)
+https://your-streamlit-app-url.streamlit.app
+
+![Main Screenshot](images/screenshot_main.png)
 
 ## How It Works
 
-The system implements a streamlined three-step workflow that transforms raw historical sales data into optimized inventory ordering recommendations:
+### Step 1: Data Input and Preprocessing
+Users may:
+- Upload a CSV file containing columns: date, sku, quantity  
+- Or use the provided sample dataset at inventory_optimizer/sample_data/sales_history.csv
 
-**Step 1: Data Input and Forecasting** - Users begin by loading historical sales data either by uploading a CSV file or using the provided sample dataset located at `inventory_optimizer/sample_data/sales_history.csv`. The system accepts CSV files with three required columns: date, sku, and quantity. Once loaded, users select an aggregation frequency (daily, weekly, or monthly) that determines the time granularity for analysis. The system then preprocesses the data by parsing dates, handling missing values, and aggregating sales to the selected frequency using pandas resampling operations. Following preprocessing, the forecasting module computes baseline demand forecasts for each SKU using a moving window approach. For each SKU, the system takes the most recent N periods (configurable, default 8 periods) and calculates the mean demand (expected value) and standard deviation (uncertainty measure). The system also assigns cost parameters to each SKU, including unit purchase cost, holding cost per unit of excess inventory, stockout penalty per unit of unmet demand, and volume requirements per unit. These parameters are assigned default values if not explicitly provided by the user, ensuring the system can operate with minimal configuration. After preprocessing, users see a "Preprocessed demand data" table in the main panel showing the first 20 rows of aggregated data with columns: date, sku, quantity. The main panel also displays a "Baseline demand forecast per SKU" table showing for each SKU: sku identifier, mean_demand (expected demand for the next period), std_demand (standard deviation, uncertainty measure), unit_cost (assigned unit purchase cost), holding_cost (assigned holding cost per unit), stockout_penalty (assigned stockout penalty per unit), and volume (assigned volume requirement per unit).
+The system:
+- Parses dates  
+- Aggregates the data (daily, weekly, or monthly)  
+- Handles missing values  
+- Produces a clean SKU-by-period demand table  
 
-**Step 2: Optimization** - Once forecasts and cost parameters are established, users configure optimization constraints in the sidebar. The budget constraint (optional) limits total purchasing expenditure, while the capacity constraint (optional) limits total warehouse space utilization. Users also select an optimization engine: Scipy for cloud-compatible open-source optimization, or Gurobi for advanced optimization requiring a commercial license. When the user clicks "Run Optimization," the system constructs the mathematical optimization problem using the forecasted demand means, cost parameters, and constraints. The optimization model minimizes expected total cost (purchasing + holding + shortage) subject to the specified constraints. The system solves this problem using the selected engine and computes optimal order quantities Q_i for each SKU. The Scipy engine uses scipy.optimize.minimize with the SLSQP method, handling the piecewise-linear cost structure through numpy.maximum. The Gurobi engine explicitly models overstock and understock using auxiliary variables and linear constraints, potentially providing faster solution times and more reliable convergence. The optimization process typically completes in seconds for problems with dozens of SKUs. A success message appears when optimization completes, or an error message displays if optimization fails (e.g., infeasible constraints).
+### Step 2: Demand Forecasting and Cost Assignment
+For each SKU, the system examines the most recent N periods (default: 8) and computes:
+- mean demand (mu_i)  
+- standard deviation (uncertainty measure)  
 
-**Step 3: Recommendations** - After optimization completes, the system presents comprehensive results through an interactive Streamlit dashboard. The optimization results table displays for each SKU the optimal order quantity (Q_optimal), expected demand, cost parameters, and computed cost components. Visualizations include historical demand charts (interactive time series for selected SKUs, accessible via a dropdown menu), order quantity charts (horizontal bar charts showing Q_optimal by SKU, sorted from lowest to highest), and cost breakdown charts (stacked bar charts showing purchasing, holding, and shortage costs per SKU). The recommendation module converts raw optimization outputs into interpretable business insights, computing per-SKU cost breakdowns, aggregate metrics such as total cost and constraint utilization percentages, and generating 3-8 textual insights that explain the rationale behind recommendations. Key performance indicators display total purchasing cost, total holding cost, total shortage cost, total expected cost, budget utilization percentage (if budget constraint is active), and capacity utilization percentage (if capacity constraint is active). A detailed per-SKU cost breakdown table shows purchasing cost component, holding cost component (overstock penalty), shortage cost component (understock penalty), and total cost for each SKU. Users can perform scenario analysis by adjusting budget and capacity constraints in real-time and re-running optimization to observe how recommendations change under different scenarios. This enables what-if analysis to understand the sensitivity of recommendations to constraint levels and cost parameters.
+Cost parameters assigned per SKU:
+- unit_cost (c_i)  
+- holding_cost (h_i)  
+- stockout_penalty (p_i)  
+- volume requirement (v_i)  
+
+Defaults are applied automatically if the user does not specify values.
+
+### Step 3: Optimization
+The user selects:
+- Budget constraint (optional)  
+- Capacity constraint (optional)  
+- Optimization engine: SciPy or Gurobi  
+
+The system constructs the optimization problem using:
+- forecasted demand  
+- cost structure  
+- selected constraints  
+
+SciPy solves via SLSQP (nonlinear optimization).  
+Gurobi solves a linearized formulation (when available).
+
+The solver outputs optimal order quantities Q_i.
+
+### Step 4: Recommendations and Insights
+The system generates:
+- Cost breakdown per SKU (purchasing, holding, shortage)  
+- Overall cost metrics  
+- Budget and capacity utilization  
+- Visualizations: demand history, order quantities, cost composition  
+- A set of short insights summarizing key drivers and patterns  
 
 ### The Analytics Behind It
 
-**Forecasting Method**: The system implements baseline demand forecasting using a moving window approach. For each SKU, the forecasting module sorts historical demand data by date, selects the most recent N periods (where N is configurable, default 8), and computes mean demand as μ_i = (1/N) * Σ D_{i,t} for the last N periods, and standard deviation as σ_i = std({D_{i,t}}) for the last N periods. This approach provides both point estimates (mean) and uncertainty measures (standard deviation) for each SKU. The moving window ensures that forecasts are based on recent trends rather than outdated historical patterns, making the system responsive to changing demand conditions. The forecasting module groups data by SKU, sorts by date, and applies statistical calculations to recent periods, ensuring that each SKU receives an individualized forecast based on its own historical pattern. The system automatically handles data preprocessing including date parsing, missing value removal, quantity validation, chronological sorting, grouping by SKU, and resampling to the selected frequency using pandas resample() function.
+Data used:
+- Historical sales  
+- User-provided or default cost values  
+- Budget and capacity constraints  
 
-**Optimization Model**: The optimization model is a constrained nonlinear programming problem that minimizes expected total cost subject to budget and capacity constraints. The model uses a newsvendor-type formulation adapted for multiple SKUs with shared constraints. The decision variables are the order quantities Q_i for each SKU i, where Q_i ≥ 0. The objective function is piecewise-linear due to the max functions in overstock and understock calculations. The Scipy engine handles this by using numpy.maximum to create a smooth approximation suitable for gradient-based optimization. The Gurobi engine reformulates the problem using auxiliary variables to convert it into a linear program, which can be solved more efficiently. Both engines respect the same constraints: budget limits (if specified), capacity limits (if specified), and non-negativity requirements. The optimization process systematically explores the feasible solution space, evaluating total cost for different combinations of order quantities, and identifying the combination that minimizes expected total cost.
+Models used:
+- Moving-average forecast  
+- Constrained cost minimization model  
 
-**Cost Structure**: The cost modeling layer translates inventory decisions into financial consequences. For each SKU, the system models three cost components: purchasing costs are linear in order quantity (c_i * Q_i), holding costs apply only to excess inventory (h_i * max(Q_i - μ_i, 0)), and shortage costs apply only to unmet demand (π_i * max(μ_i - Q_i, 0)). The relative magnitudes of holding costs (h_i) and shortage costs (π_i) determine the optimal service level. When shortage penalties are high relative to holding costs, the model recommends ordering more to avoid stockouts. When holding costs dominate, the model recommends more conservative ordering to minimize excess inventory. The cost structure explicitly models the economic trade-offs that drive inventory decisions, ensuring that recommendations balance the competing objectives of avoiding overstock and preventing stockouts. Default cost parameters are assigned if not explicitly provided: unit_cost defaults to 10.0, holding_cost defaults to 1.0 per unit of excess inventory, stockout_penalty defaults to 5.0 per unit of unmet demand, and volume defaults to 1.0 (warehouse space units per product unit).
-
-**Constraints**: The model incorporates two types of real-world limitations. The budget constraint (if budget B is provided) ensures that total purchasing expenditure does not exceed available budget: Σ_i c_i * Q_i ≤ B. This constraint forces the optimization model to allocate limited financial resources across SKUs, potentially reducing order quantities for lower-priority items when budget is tight. The capacity constraint (if capacity C is provided) ensures that total warehouse space requirements do not exceed available capacity: Σ_i v_i * Q_i ≤ C. This constraint limits the physical space available for inventory storage, requiring the model to balance order quantities across SKUs based on their volume requirements. Non-negativity constraints (Q_i ≥ 0 for all i) ensure that order quantities are physically meaningful. These constraints work together to define the feasible solution space, and the optimization algorithm searches within this space to find the cost-minimizing solution. Users can set budget and capacity constraints to 0.0 to disable them, allowing unconstrained optimization.
-
-**Engines (Scipy + Gurobi)**: The system provides two optimization engines with different capabilities. The Scipy Engine uses scipy.optimize.minimize with the SLSQP (Sequential Least Squares Programming) method. This engine handles continuous optimization problems with smooth objective functions and constraints. The piecewise-linear cost structure (via max functions) is handled using numpy.maximum, which creates a smooth approximation suitable for gradient-based optimization. The SLSQP method is a sequential quadratic programming algorithm that handles bound constraints and nonlinear constraints efficiently. This engine is suitable for cloud deployment and does not require commercial software licenses, making it ideal for public-facing applications or cloud-hosted deployments. The Gurobi Engine uses Gurobi Optimizer, a commercial optimization solver that provides advanced capabilities for mixed-integer programming and linear programming. The Gurobi implementation explicitly models overstock and understock using auxiliary variables and linear constraints, allowing for more precise representation of the piecewise-linear cost structure. Specifically, the Gurobi model introduces auxiliary variables overstock[i] ≥ 0 and understock[i] ≥ 0 for each SKU, with linear constraints: overstock[i] ≥ Q[i] - μ_i and understock[i] ≥ μ_i - Q[i]. This formulation allows Gurobi to solve the problem as a linear program rather than a nonlinear program, potentially providing faster solution times and more reliable convergence. The Gurobi engine requires a license (academic licenses available free of charge) and is intended for local use or advanced demonstrations. The system includes proper error handling to gracefully fall back to the Scipy engine when Gurobi is not available, ensuring the system remains functional regardless of which optimization libraries are installed.
-
-**Recommendation Logic**: The recommendation module converts raw optimization outputs into interpretable business insights through a multi-step process. First, it computes per-SKU cost breakdowns by calculating purchasing costs (c_i * Q_i), holding costs (h_i * max(Q_i - μ_i, 0)), and shortage costs (π_i * max(μ_i - Q_i, 0)) for each SKU. Second, it aggregates these costs across all SKUs to produce total purchasing cost, total holding cost, total shortage cost, and total expected cost. Third, it calculates constraint utilization percentages: budget utilization = (total purchasing cost / budget) * 100 and capacity utilization = (total capacity used / capacity) * 100, if constraints are active. Fourth, it identifies notable patterns: top cost-contributing SKUs (highest total cost), high order ratio SKUs (Q_i significantly above mean demand), and low order ratio SKUs (Q_i significantly below mean demand). Fifth, it generates textual insights that explain these patterns in business-friendly language, such as identifying which cost components dominate, whether constraints are binding, and what actions might improve the recommendations. Example insights include: "Total cost breakdown: 65% purchasing, 20% holding, 15% shortage", "Budget utilization is 95%. Consider increasing budget to allow for more optimal ordering", "SKU B has the highest order ratio (1.5x mean demand). This may be due to high stockout penalty or high demand uncertainty", and "Holding costs dominate shortage costs. Consider reducing order quantities to minimize overstock risk." This recommendation logic bridges the gap between mathematical optimization results and actionable business guidance.
-
-**System Architecture**: The project follows a modular architecture that separates concerns and enables maintainability. The inventory_optimizer package contains: app.py (Streamlit front-end and orchestration), data.py (data loading and preprocessing), forecasting.py (demand forecasting logic), optimizer_scipy.py (Scipy optimization engine), optimizer_gurobi.py (Gurobi optimization engine, optional), recommender.py (recommendations and metrics), visualization.py (plot generation), config.py (defaults and configuration helpers), and sample_data/sales_history.csv (synthetic example data). Each module has well-defined responsibilities. The config.py module provides default cost parameters (unit cost, holding cost, stockout penalty, volume) and helper functions to enrich forecast data with cost information when parameters are not explicitly provided. The apply_default_costs() function ensures that all required cost columns exist in the forecast DataFrame. The data.py module handles loading sample data or user-uploaded CSV files, validates required columns (date, sku, quantity), and preprocesses data by parsing dates, handling missing values, and aggregating to the selected frequency (daily, weekly, or monthly). The preprocess_sales() function uses pandas resampling to aggregate time series data. The forecasting.py module implements baseline demand forecasting using a moving window approach. For each SKU, it computes mean demand and standard deviation over the most recent N periods, providing both point estimates and uncertainty measures. The compute_baseline_forecast() function groups data by SKU, sorts by date, and applies statistical calculations to recent periods. The optimizer_scipy.py module implements the core optimization model using Scipy's SLSQP solver. It handles continuous optimization with budget and capacity constraints, using numpy.maximum to model piecewise-linear cost functions. The optimize_inventory_scipy() function constructs the objective function, defines constraints, sets bounds, and calls scipy.optimize.minimize. The optimizer_gurobi.py module implements the same optimization model using Gurobi Optimizer. It uses auxiliary variables to explicitly model overstock and understock, providing a more precise representation of the cost structure. It includes proper ImportError handling for graceful degradation when Gurobi is not available. The recommender.py module converts raw optimization results into interpretable business metrics. It computes per-SKU cost breakdowns, aggregate totals, constraint utilization percentages, and generates textual insights that explain the recommendations. The make_recommendations() function identifies top cost-contributing SKUs, high/low order ratios, and cost dominance patterns. The visualization.py module generates Plotly charts for demand history (time series), order quantities (bar charts), and cost breakdowns (stacked bar charts). All visualizations are interactive and compatible with Streamlit. Functions include plot_demand_history(), plot_order_quantities(), and plot_cost_breakdown(). The app.py module is the main Streamlit application that orchestrates all modules and provides the interactive user interface. It handles user inputs, coordinates data flow through the pipeline, and presents results through a structured dashboard with multiple sections including data preview, historical visualization, forecasting, optimization, and recommendations.
+How recommendations are generated:
+- The solver finds Q_i values that minimize total cost  
+- The system interprets results into tables, charts, and business insights
 
 ## Example Output
 
-The system generates comprehensive outputs across multiple dimensions that enable users to understand both the recommended actions and the underlying economic drivers:
+### Forecast Summary Table
+Columns include:
+- sku  
+- mean_demand  
+- std_demand  
+- unit_cost  
+- holding_cost  
+- stockout_penalty  
+- volume  
 
-**Forecast Summary Table**: The forecasting module produces a table showing for each SKU the expected demand (mean_demand), demand uncertainty (std_demand), and assigned cost parameters (unit_cost, holding_cost, stockout_penalty, volume). This table provides visibility into the predictive layer and allows users to verify that forecasts align with business expectations. For example, a SKU with high mean demand and low standard deviation indicates stable, predictable demand, while high standard deviation suggests volatile demand requiring more careful inventory management.
+Example:
 
-![Forecast Example](./images/forecast_example.png)
+![Forecast Summary](images/forecast_summary.png)
 
-**Optimization Results Table**: The optimization engine produces a detailed results table that includes for each SKU: the optimal order quantity (Q_optimal), expected demand, cost parameters, and computed cost components. This table enables users to understand both the recommended actions and the underlying economic drivers. Users can see, for instance, that SKU B might receive a higher order quantity than SKU A not because of higher demand, but because of higher stockout penalties or lower holding costs.
+### Optimal Order Quantities
+Includes:
+- expected demand mu_i  
+- optimal order quantity Q_i  
+- ratio Q_i / mu_i  
 
-**Historical Demand Charts**: Interactive time series line charts showing historical demand patterns for selected SKUs. These charts help users understand demand variability and validate that forecasts capture historical trends. Users can select any SKU from a dropdown menu to view its demand history, identifying patterns such as trends, seasonality, or volatility that inform the forecasting process.
+![Optimal Orders](images/optimal_orders.png)
 
-**Order Quantity Charts**: Horizontal bar charts showing optimal order quantities by SKU. These charts provide a quick visual comparison of ordering recommendations across products, making it easy to identify which SKUs receive the largest order quantities and understand the relative prioritization of different products.
+### Cost Breakdown
+Shows:
+- purchasing cost  
+- holding cost  
+- shortage cost  
+- total cost  
 
-**Cost Breakdown Charts**: Stacked bar charts showing the composition of total costs (purchasing, holding, shortage) for each SKU. These charts reveal which cost components dominate and help identify opportunities for cost reduction. For example, if holding costs dominate for most SKUs, it may indicate that order quantities are too high relative to expected demand.
+![Cost Breakdown](images/cost_breakdown.png)
 
-**Recommendation Metrics**: The recommendation module produces aggregate metrics displayed as key performance indicators: total purchasing cost (sum of all purchasing costs across SKUs), total holding cost (sum of all holding costs, overstock penalties), total shortage cost (sum of all shortage costs, understock penalties), total expected cost (sum of all cost components), budget utilization percentage ((Total purchasing cost / Budget) * 100, if budget constraint is active), and capacity utilization percentage ((Total capacity used / Capacity) * 100, if capacity constraint is active).
+### Key Metrics
+- total purchasing cost  
+- total holding cost  
+- total shortage cost  
+- total expected cost  
+- budget usage  
+- capacity usage  
 
-**Per-SKU Cost Breakdown Table**: A detailed table showing for each SKU the purchasing cost, holding cost component, shortage cost component, and total cost. This breakdown enables users to identify which SKUs drive the majority of costs and understand the cost structure of each product. Users can sort this table by total cost to identify the most expensive SKUs to manage.
-
-**Textual Insights**: The system generates 3-8 short, actionable insights that explain the recommendations. These insights identify top cost-contributing SKUs, SKUs with high or low order ratios relative to expected demand, cost dominance patterns (holding vs. shortage), and constraint binding status. For example, insights might state: "SKU B has the highest order ratio (1.5x mean demand). This may be due to high stockout penalty or high demand uncertainty." or "Budget utilization is 95%. Consider increasing budget to allow for more optimal ordering." The insights are written in business-friendly language that bridges the gap between mathematical optimization and practical decision-making.
-
-![Optimization Results](./images/optimization_results.png)
+### Insights
+Examples:
+- A specific SKU may drive a large share of total cost  
+- Budget or capacity constraints may be binding  
+- Some SKUs may optimally be ordered below forecast due to high holding cost  
 
 ## Technology Stack
 
-The system is built using a modern Python technology stack optimized for data science, optimization, and interactive application development:
-
-**Streamlit**: Web application framework (>=1.28.0) for building interactive data science applications. Streamlit provides the user interface, sidebar controls, data display, and chart rendering capabilities. It enables rapid development of interactive dashboards without requiring web development expertise. The framework handles session state management, file uploads, and real-time updates when users interact with controls.
-
-**SciPy**: Scientific computing library (>=1.10.0) providing the SLSQP optimization solver through scipy.optimize.minimize. This handles continuous optimization with bounds and constraints, making it suitable for cloud deployment without commercial dependencies. SLSQP (Sequential Least Squares Programming) is a gradient-based optimization algorithm that efficiently handles nonlinear objective functions and constraints.
-
-**Gurobi**: Commercial optimization library (optional, via gurobipy) providing advanced mixed-integer programming capabilities. Gurobi offers potentially faster solution times and more precise modeling of piecewise-linear cost structures through auxiliary variables. The system includes graceful fallback to Scipy when Gurobi is not installed.
-
-**pandas**: Data manipulation library (>=2.0.0) handling CSV loading, date parsing, time series resampling, and DataFrame operations throughout the pipeline. The library's resample() function is used to aggregate daily sales data to weekly or monthly frequencies, and groupby() operations enable per-SKU calculations.
-
-**numpy**: Numerical computations library (>=1.24.0) used extensively in optimization for vectorized cost calculations and constraint evaluations. The numpy.maximum() function is critical for modeling piecewise-linear overstock and understock costs in the Scipy optimization engine.
-
-**Plotly**: Interactive plotting library (>=5.17.0) for creating dynamic, web-compatible charts. Plotly generates time series charts, bar charts, and stacked bar charts that are seamlessly integrated into the Streamlit interface. The library provides hover tooltips, zooming, and panning capabilities for enhanced user experience. Charts are rendered using plotly.graph_objects and plotly.express modules.
-
-**CSV Input**: The system accepts historical sales data in CSV format with required columns (date, sku, quantity). The system includes a sample dataset (sales_history.csv) with 5 SKUs and 2 months of daily sales data for demonstration purposes. Users can upload their own CSV files through the Streamlit file uploader interface.
-
-The technology stack is designed for both development and production deployment. The Scipy-based optimization engine enables cloud deployment on platforms such as Streamlit Cloud, Heroku, or AWS without requiring commercial software licenses. The modular architecture allows for easy extension and customization, while the use of standard Python data science libraries ensures compatibility with existing workflows and tools.
+- Streamlit (UI and dashboards)  
+- SciPy (SLSQP optimization)  
+- Gurobi (optional advanced solver)  
+- pandas and numpy (data handling and preprocessing)  
+- Plotly (interactive charts)  
+- CSV data input  
 
 ## About This Project
 
-This project was built for **ISOM 839 - Prescriptive Analytics** at **Suffolk University** as a comprehensive demonstration of end-to-end prescriptive analytics capabilities. The project integrates predictive analytics (demand forecasting), descriptive analytics (cost modeling), and prescriptive analytics (mathematical optimization) into a unified decision support system.
+Developed for ISOM 839 – Prescriptive Analytics at Suffolk University.
 
-The project demonstrates proficiency in:
-- Mathematical optimization modeling and formulation
-- Constrained optimization problem solving
-- Demand forecasting and time series analysis
-- Cost modeling and economic analysis
-- Interactive dashboard development
-- Software engineering best practices (modular design, error handling, documentation)
+Demonstrates:
+- End-to-end prescriptive analytics workflow  
+- Mathematical optimization modeling  
+- Forecasting and cost modeling  
+- Interactive decision-support system development  
+- Clear communication of analytical insights  
 
-**Author**: [Your Name]  
-**LinkedIn**: [Your LinkedIn Profile URL]  
-**Email**: [Your Email Address]
-
-The codebase follows professional software engineering practices including modular architecture, comprehensive error handling, type hints, docstrings, and clear separation of concerns. The system is designed to be both a learning tool and a portfolio demonstration of prescriptive analytics capabilities that can be reviewed by potential employers or academic evaluators.
+Author: Your Name  
+LinkedIn: Your URL  
+Email: your.email@example.com  
 
 ## Future Possibilities
 
-The current system provides a solid foundation that can be extended in several directions to enhance capabilities and address more complex inventory management scenarios:
-
-**Advanced Forecasting Models**: The current baseline forecasting uses a simple moving average approach. Future enhancements could incorporate more sophisticated time series models such as exponential smoothing, ARIMA models, seasonal decomposition, or machine learning approaches (LSTM, Prophet, XGBoost) that can capture trends, seasonality, and non-linear patterns in demand. These advanced models could improve forecast accuracy, especially for SKUs with complex demand patterns.
-
-**Multi-Period Optimization**: The current model optimizes for a single upcoming period. Extending to multi-period optimization would allow the system to recommend ordering strategies over multiple time horizons, accounting for lead times, seasonality, and inter-period dependencies. This would enable more strategic inventory planning that considers the timing of orders across multiple periods.
-
-**Stochastic Optimization**: The current model uses expected values (mean demand) in the objective function. A stochastic optimization approach could explicitly model demand uncertainty using probability distributions, scenario-based optimization, or robust optimization techniques that provide solutions that perform well across multiple demand realizations. This would provide more robust recommendations that account for demand variability.
-
-**Dynamic Cost Parameters**: Currently, cost parameters are static. Future versions could incorporate dynamic costs that vary by time period, quantity discounts, or supplier-specific pricing, requiring more complex optimization formulations. This would enable the system to recommend optimal ordering strategies that take advantage of time-varying cost structures.
-
-**SKU Relationships**: The current model treats SKUs independently. Future enhancements could model relationships between SKUs such as substitution effects (when one SKU can substitute for another), complementary products (when demand for one SKU increases demand for another), or shared supplier constraints. This would enable more sophisticated portfolio-level optimization.
-
-**Integration Capabilities**: The system could be extended to integrate with enterprise systems such as ERP systems, warehouse management systems, or supplier portals to automatically pull data and push recommendations, reducing manual data entry and enabling real-time decision support. This would transform the system from a standalone tool into an integrated component of operational workflows.
-
-**Advanced Constraint Modeling**: Beyond budget and capacity, the system could incorporate additional constraints such as minimum order quantities, supplier-specific constraints, transportation capacity, or service level requirements. These extensions would make the system applicable to more complex real-world scenarios.
-
-**User Customization**: Enhanced user interface features could allow users to customize cost parameters per SKU, define custom constraint types, save and compare scenarios, or export results in various formats for integration with other systems. This would improve usability and enable the system to adapt to different organizational needs.
-
-**Performance Optimization**: For large-scale deployments with hundreds or thousands of SKUs, the system could be optimized for computational efficiency through parallel processing, caching, or specialized optimization algorithms. This would enable the system to scale to enterprise-level inventory management problems.
-
-**Business Value Opportunities**: The system could be extended to provide additional business value through features such as sensitivity analysis (showing how recommendations change with parameter variations), risk analysis (quantifying the impact of demand uncertainty), or automated reporting (generating executive summaries and action plans). These enhancements would increase the system's value as a decision support tool.
+- Multi-period planning with lead times  
+- Advanced forecasting models (ARIMA, exponential smoothing, ML models)  
+- Service-level constraints  
+- Quantity discounts and supplier constraints  
+- SKU substitution or complementarity modeling  
+- ERP/WMS integration  
+- Enhanced scenario analysis tools  
 
 ## Demo Video
 
-[Watch the 3-minute walkthrough →](./videos/demo.mp4)
+Place your video in:
+videos/demo.mp4
+
+Link it here:
+[Watch the walkthrough](videos/demo.mp4)
